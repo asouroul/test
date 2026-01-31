@@ -1,0 +1,64 @@
+const http = require('http');
+
+const test = require("ava");
+const app = require("../index.js");
+
+test.before(async (t) => {
+    const got = await import("got");
+	t.context.server = http.createServer(app);
+    const server = t.context.server.listen();
+    const { port } = server.address();
+	t.context.got = got.default.extend({ responseType: "json", prefixUrl: `http://localhost:${port}` });
+});
+
+test("GET /books returns correct response and status code", async (t) => {
+    const { _, statusCode } = await t.context.got("books");
+    t.is(statusCode, 200);
+});
+
+test("GET /books/0 returns correct response and status code", async (t) => {
+    const { _, statusCode } = await t.context.got("books/0");
+    t.is(statusCode, 200);
+});
+
+test("GET /authors returns correct response and status code", async (t) => {
+    const { _, statusCode } = await t.context.got("authors");
+    t.is(statusCode, 200);
+});
+
+test("GET /authors/0 returns correct response and status code", async (t) => {
+    const { _, statusCode } = await t.context.got("authors/0");
+    t.is(statusCode, 200);
+});
+
+test("GET /categories returns correct response and status code", async (t) => {
+    const { _, statusCode } = await t.context.got("categories");
+    t.is(statusCode, 200);
+});
+
+test("GET /categories/0 returns correct response and status code", async (t) => {
+    const { _, statusCode } = await t.context.got("categories/0");
+    t.is(statusCode, 200);
+});
+
+test("DELETE /books/0", async (t) => {
+    const { _, statusCode } = await t.context.got.delete("books/0");
+    t.is(statusCode, 200);
+});
+
+test("DELETE /authors/0", async (t) => {
+    const { _, statusCode } = await t.context.got.delete("authors/0");
+    t.is(statusCode, 200);
+});
+
+test("DELETE /categories/0", async (t) => {
+    const { _, statusCode } = await t.context.got.delete("categories/0");
+    t.is(statusCode, 200);
+});
+
+test.after.always((t) => {
+    t.context.server.close();
+});
+
+
+ALSO at the end of index.js  ->  module.exports = app;
