@@ -1,0 +1,151 @@
+1. Multiple Executors
+Different ways to control how VUs run:
+
+export const options = {
+ scenarios: {
+  // Ramping VUs (like stages), ramping-vus - Gradually change user count
+  gradual_load: {
+    executor: 'ramping-vus',
+    startVUs: 0,
+    stages: [
+      { duration: '1m', target: 100 },
+      { duration: '1m', target: 100 },
+      { duration: '1m', target: 0 },
+    ],
+    gracefulRampDown: '10s'
+  },
+  
+  // Constant VUs, constant-vus - Fixed user count
+  steady_state: {
+    executor: 'constant-vus',
+    vus: 50,
+    duration: '5m'
+  },
+
+//Rate-Based Executors
+//These control how many requests per second, regardless of how many users it takes.
+
+  // Constant request rate, constant-arrival-rate - Fixed requests per second
+  fixed_rate: {
+    executor: 'constant-arrival-rate',
+    rate: 100,        // 100 iterations/second
+    timeUnit: '1s',
+    duration: '5m',
+    preAllocatedVUs: 50,
+    maxVUs: 300
+  },
+
+ ramping_arrival_late: { 
+  executor: 'ramping-arrival-rate',
+  startRate: 50,
+  timeUnit: '1s',
+  stages: [
+    { duration: '2m', target: 200 },  // Ramp from 50 to 200 iterations/sec
+    { duration: '3m', target: 200 },  // Keep at 200 iterations/sec
+  ],
+  preAllocatedVUs: 50,
+  maxVUs: 300
+  - Starts at 50 iterations per second
+  - Gradually increases to 200 iterations per second
+  - k6 automatically adjusts VU count to maintain the rate
+  }
+ }
+};
+
+export default function() {
+  // ← ITERATION STARTS
+  
+  // User visits homepage
+  http.get('http://localhost:3000/');              // Request 1
+  sleep(2);  // User reads homepage for 2 seconds
+  
+  // User searches for products
+  http.get('http://localhost:3000/search?q=shoes'); // Request 2
+  sleep(3);  // User browses results for 3 seconds
+  
+  // User views a product
+  http.get('http://localhost:3000/product/123');    // Request 3
+  sleep(5);  // User reads product details for 5 seconds
+  
+  // User adds to cart
+  http.post('http://localhost:3000/cart/add', {    // Request 4
+    productId: 123,
+    quantity: 1
+  });
+  sleep(1);
+  
+  // ← ITERATION ENDS
+}
+
+-----------------------------------------------------------------------------------
+
+2. Run Multiple Scenarios Simultaneously
+Test different user behaviors at once:
+
+scenarios: {
+  // Browsing users
+  browsers: {
+    executor: 'constant-vus',
+    vus: 100,
+    duration: '10m',
+    exec: 'browsePages'  // Calls browsePages function
+  },
+  
+  // API users
+  api_users: {
+    executor: 'constant-vus',
+    vus: 50,
+    duration: '10m',
+    exec: 'apiCalls'  // Calls apiCalls function
+  },
+  
+  // Admin users (fewer, different behavior)
+  admins: {
+    executor: 'constant-vus',
+    vus: 5,
+    duration: '10m',
+    exec: 'adminTasks'
+  }
+}
+
+// Different functions for different scenarios
+export function browsePages() {
+  http.get('http://localhost:3000/');
+  sleep(2);
+}
+
+export function apiCalls() {
+  http.get('http://localhost:3000/api/data');
+  sleep(0.5);
+}
+
+export function adminTasks() {
+  http.post('http://localhost:3000/admin/update');
+  sleep(10);
+}
+
+------------------------------------------------------------------------------------
+
+4. Scenario-Specific Thresholds
+Set different success criteria per scenario:
+
+scenarios: {
+  critical_api: {
+    executor: 'constant-vus',
+    vus: 50,
+    duration: '5m'
+  },
+  background_jobs: {
+    executor: 'constant-vus',
+    vus: 10,
+    duration: '5m'
+  }
+},
+thresholds: {
+  // Global threshold
+  http_req_duration: ['p(95)<500'],
+  
+  // Scenario-specific threshold
+  'http_req_duration{scenario:critical_api}': ['p(95)<200'],
+  'http_req_duration{scenario:background_jobs}': ['p(95)<2000']
+}
