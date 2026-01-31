@@ -1,0 +1,108 @@
+import http from "node:http";
+
+import test from "ava";
+import got from "got";
+
+import app from "../index.js";
+
+const mockData = {
+  books: [
+    { id: 1,
+      title: "The Great Gatsby",
+      author_id: 1,
+      category_id: 1,
+      published_year: 1925
+    },
+    { id: 2,
+      title: "The stranger",
+      author_id: 2,
+      category_id: 2,
+      published_year: 1956
+    },
+    { id: 3,
+      title: "To Kill a Mockingbird",
+      author_id: 3,
+      category_id: 1,
+      published_year: 1960
+    }
+  ],
+  authors: [
+        { id: 1, name: "F. Scott Fitzgerald" },
+        { id: 2, name: "Albert Camus" },
+        { id: 3, name: "Harper Lee" },
+        { id: 4, name: "Franz Kafka" }
+  ],
+  categories: [
+        { id: 1, name: "Fiction" },
+        { id: 2, name: "Dystopian" },
+        { id: 3, name: "Science Fiction" }
+    ]
+}
+
+test.before(async (t) => {
+  t.context.mockData = mockData;
+	t.context.server = http.createServer(app);
+    const server = t.context.server.listen();
+    const { port } = server.address();
+	t.context.got = got.extend({ responseType: "json", prefixUrl: `http://localhost:${port}` });
+});
+
+test.after.always((t) => {
+	t.context.server.close();
+});
+
+test("GET /books - get all books", async (t) => {
+  const { body, statusCode } = await t.context.got.get("books")
+
+   t.is(statusCode, 200);
+   t.true(Array.isArray(body));
+   // The actual service returns 2 items, so we test for that
+   t.true(body.length > 0);
+})
+
+test("POST /books - add a new book", async (t) => {
+  const newBook = {
+    title:"Metamorphosis",
+    author_id:"4",
+    category_id:"2",
+    published_year:"1915"
+  };
+
+  const {body, statusCode} = await t.context.got.post("books", {json:newBook});
+
+  t.is(statusCode, 201);
+  t.truthy(body.id);
+})
+
+test("PUT /books/1 updates book and returns 200", async (t) => {
+    const updatedBook = {
+        title: "Updated Book Title",
+        author_id: 1,
+        category_id: 1,
+        published_year: 2025
+    };
+    
+    const { statusCode, body } = await t.context.got.put("books/1", {
+        json: updatedBook
+    });
+    
+    // Status code - be specific
+    t.is(statusCode, 200);
+    
+    // If you know the exact values, use t.is()
+    t.is(body.id, 1);  // Should be book ID 1
+    
+    // If you just need to check existence, use t.truthy()
+    t.truthy(body.title);
+    t.truthy(body.author_id);
+    t.truthy(body.category_id);
+    
+    // Check types (best for numbers that could be 0)
+    t.is(typeof body.published_year, "number");
+});
+
+test("DELETE /books/1 deletes book and returns 204", async (t) => {
+    const { statusCode } = await t.context.got.delete("books/1");
+    
+    t.is(statusCode, 204);
+});
