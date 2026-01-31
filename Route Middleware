@@ -1,0 +1,111 @@
+import express from "express"; // Import express library
+import "dotenv/config"; // Load environment variables from .env file
+import cors from "cors"; // Import CORS middleware
+import axios from "axios"; // Import axios for making HTTP requests
+
+const app = express(); // Create an express app/server
+// const PORT = 3000; // Port number in which the server will run
+const PORT = process.env.PORT || 3000; // Use PORT from .env or default to 3000
+
+/********** Global Middleware ***********/
+// Global Middleware: Executed for every request to the server
+
+app.use(express.json()); // Middleware to parse JSON data (in POST requests)
+app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded data (in POST requests)
+
+app.use(cors({
+    origin: false, // Block all cross-origin requests
+    credentials: false
+    // origin: '*', // allow any origin (use this for development; for production, specify allowed origins)
+    // credentials: false // must be false when origin is '*'
+    // OR
+    // origin: ['http://localhost:8000', 'http://example.com'], // Allow multiple specific origins
+    // credentials: true // Must be true when origin is specific
+}));
+// use localhost:8000, the problem is that the browser caches accepted CORS
+// So once one is accepted, the CORS will always be accepted from that origin
+// until the browser cache is cleared
+
+
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next(); // No response sent, need to call next()
+});
+
+const books = [
+    { id: 1, title: "1984", author: "George Orwell", year: 1949 },
+    { id: 2, title: "To Kill a Mockingbird", author: "Harper Lee", year: 1960 },
+    { id: 3, title: "The Great Gatsby", author: "F. Scott Fitzgerald", year: 1925 }
+];
+
+const authors = [
+    { id: 1, name: "George Orwell" },
+    { id: 2, name: "Harper Lee" }
+];
+
+const categories = [
+    { id: 1, name: "Fiction" },
+    { id: 2, name: "Science" }
+];
+
+/********** Route (path-specific) Middleware ***********/
+// Executed only for requests to specific routes
+
+app.get("/books", function(req,res){
+    res.send(books);
+});
+
+app.post("/books", function(req,res){
+    const title = req.body.title;
+    const author_id = req.body.author_id;
+    const category_id = req.body.category_id;
+    const published_year = req.body.published_year;
+
+    const new_Book = {
+        id: books.length + 1,
+        title: title,
+        author_id: author_id,
+        category_id: category_id,
+        published_year: published_year
+    };
+
+    books.push(new_Book);
+
+    res.status(201).send(new_Book);
+});
+
+app.get("/books/:bookId", function(req,res){
+    const bookId = parseInt(req.params.bookId);
+    const book = books.find(b => b.id === bookId);
+
+    res.status(200).send(book);
+
+});
+
+app.put("/books/:bookId", (req,res) => {
+    const bookId = parseInt(req.params.bookId);
+    const book_Index = books.findIndex(b => b.id === bookId);
+
+    if (book_Index === -1) {
+        return res.status(404).json({ error: "Book not found" });
+    }
+
+    books[book_Index] = {
+        id: bookId,
+        title: req.body.title,
+        author_id: req.body.author_id,
+        category_id: req.body.category_id,
+        published_year: req.body.published_year
+    }
+
+    res.status(200).send(books[book_Index]);
+
+});
+
+app.delete("/books/:bookId", (req,res) => {
+    const bookId = parseInt(req.params.bookId);
+    const book_Index = books.findIndex(b => b.id === bookId);
+
+    books.splice(book_Index, 1); // Remove 1 item starting at index book_Index
+    res.status(204).send();
+});
