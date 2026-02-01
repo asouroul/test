@@ -12,8 +12,9 @@ test.before(async (t) => {
 });
 
 test("GET /books returns correct response and status code", async (t) => {
-    const { _, statusCode } = await t.context.got("books");
+    const { _, statusCode, headers } = await t.context.got("books");
     t.is(statusCode, 200);
+	t.is(headers["content-type"], "application/json");
 });
 
 test("GET /books/0 returns correct response and status code", async (t) => {
