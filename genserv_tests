@@ -1,24 +1,23 @@
 const http = require('http');
-//const got = require('got');
+const got = require('got');
 const test = require("ava");
 const app = require("../index.js");
 
 test.before(async (t) => {
-    const got = await import("got");
 	t.context.server = http.createServer(app);
     const server = t.context.server.listen();
     const { port } = server.address();
-	t.context.got = got.default.extend({ responseType: "json", prefixUrl: `http://localhost:${port}` });
+	t.context.got = got.default.extend({ responseType: "json", prefixUrl: `http://localhost:${port}`, throwHttpErrors: false });
 });
 
 test("GET /books returns correct response and status code", async (t) => {
-    const { _, statusCode, headers } = await t.context.got("books");
+    const { body, statusCode, headers } = await t.context.got("books");
     t.is(statusCode, 200);
 	t.is(headers["content-type"], "application/json");
 });
 
 test("GET /books/0 returns correct response and status code", async (t) => {
-    const { _, statusCode } = await t.context.got("books/0");
+    const { body, statusCode } = await t.context.got("books/0");
     t.is(statusCode, 200);
 });
 
@@ -44,21 +43,34 @@ test("GET /categories/0 returns correct response and status code", async (t) => 
 
 test("DELETE /books/0", async (t) => {
     const { _, statusCode } = await t.context.got.delete("books/0");
-    t.is(statusCode, 200);
+    t.is(statusCode, 204);
 });
 
 test("DELETE /authors/0", async (t) => {
     const { _, statusCode } = await t.context.got.delete("authors/0");
-    t.is(statusCode, 200);
+    t.is(statusCode, 204);
 });
 
 test("DELETE /categories/0", async (t) => {
     const { _, statusCode } = await t.context.got.delete("categories/0");
-    t.is(statusCode, 200);
+    t.is(statusCode, 204);
 });
 
 test.after.always((t) => {
     t.context.server.close();
+});
+
+test("POST /books - get all books", async (t) => {
+    const newBook = {
+        title:"the stranger",
+        author_id:2,
+        category_id:1,
+        published_year:1232
+    }
+	
+	const { body, statusCode } = await t.context.got.post("books", {json:newBook})
+	
+	t.is(statusCode, 201);
 });
 
 
