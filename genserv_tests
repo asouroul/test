@@ -76,3 +76,6 @@ test("POST /books - get all books", async (t) => {
 
 ALSO at the end of index.js  ->  module.exports = app;
 npm install --save-dev got@11.8.3
+
+https://swagger-editor.issel.ee.auth.gr 
+https://se2-exams.cyclopt.com
