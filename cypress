@@ -1,0 +1,459 @@
+# Cypress Quick Reference Guide
+
+## What is Cypress?
+Cypress is an **end-to-end testing framework** for web applications. It runs tests in a real browser and interacts with your web app like a user would (clicking buttons, filling forms, etc.).
+
+---
+
+## Basic Structure
+
+```javascript
+describe('Test Suite Name', () => {
+  
+  // Runs once before all tests in this suite
+  before(() => {
+    // Setup code (e.g., seed database)
+  });
+
+  // Runs before each test
+  beforeEach(() => {
+    cy.visit('http://localhost:3000');  // Navigate to your app
+  });
+
+  // Individual test
+  it('should do something', () => {
+    // Test code here
+  });
+
+  // Another test
+  it('should do something else', () => {
+    // Test code here
+  });
+
+  // Runs after each test
+  afterEach(() => {
+    // Cleanup after each test
+  });
+
+  // Runs once after all tests
+  after(() => {
+    // Final cleanup
+  });
+});
+```
+
+---
+
+## Essential Cypress Commands
+
+### Navigation
+```javascript
+cy.visit('http://localhost:3000')           // Go to URL
+cy.visit('/books')                          // Go to relative URL
+cy.go('back')                               // Browser back button
+cy.go('forward')                            // Browser forward button
+cy.reload()                                 // Refresh page
+```
+
+### Finding Elements (Selectors)
+```javascript
+cy.get('button')                            // By tag name
+cy.get('.my-class')                         // By class
+cy.get('#my-id')                            // By ID
+cy.get('[data-testid="submit-btn"]')        // By attribute (recommended!)
+cy.get('input[type="text"]')                // By attribute and tag
+cy.get('.parent .child')                    // By CSS selector
+
+cy.contains('Submit')                       // By text content
+cy.contains('button', 'Submit')             // Button with text "Submit"
+```
+
+### Interacting with Elements
+```javascript
+// Clicking
+cy.get('button').click()                    // Click element
+cy.get('button').dblclick()                 // Double click
+cy.get('button').rightclick()               // Right click
+
+// Typing
+cy.get('input').type('Hello World')         // Type text
+cy.get('input').type('{enter}')             // Press Enter
+cy.get('input').type('{backspace}')         // Press Backspace
+cy.get('input').clear()                     // Clear input field
+
+// Form interactions
+cy.get('select').select('Option 2')         // Select dropdown option
+cy.get('input[type="checkbox"]').check()    // Check checkbox
+cy.get('input[type="checkbox"]').uncheck()  // Uncheck checkbox
+cy.get('input[type="radio"]').check()       // Select radio button
+```
+
+### Assertions (Checking Things)
+```javascript
+// Existence
+cy.get('button').should('exist')            // Element exists
+cy.get('button').should('not.exist')        // Element doesn't exist
+
+// Visibility
+cy.get('button').should('be.visible')       // Element is visible
+cy.get('button').should('not.be.visible')   // Element is hidden
+
+// Text content
+cy.get('h1').should('have.text', 'Welcome') // Exact text match
+cy.get('h1').should('contain', 'Welc')      // Partial text match
+cy.get('p').should('include.text', 'foo')   // Contains text
+
+// Values
+cy.get('input').should('have.value', 'test')        // Input value
+cy.get('input').should('be.empty')                  // Empty input
+
+// Classes and attributes
+cy.get('button').should('have.class', 'active')     // Has CSS class
+cy.get('button').should('have.attr', 'disabled')    // Has attribute
+cy.get('a').should('have.attr', 'href', '/home')    // Attribute value
+
+// Count
+cy.get('li').should('have.length', 5)       // Exactly 5 elements
+cy.get('li').should('have.length.gt', 3)    // More than 3 elements
+cy.get('li').should('have.length.lt', 10)   // Less than 10 elements
+
+// State
+cy.get('input').should('be.disabled')       // Input is disabled
+cy.get('input').should('be.enabled')        // Input is enabled
+cy.get('input').should('be.checked')        // Checkbox is checked
+cy.get('input').should('be.focused')        // Element has focus
+```
+
+### Multiple Assertions
+```javascript
+cy.get('button')
+  .should('be.visible')
+  .and('have.class', 'active')
+  .and('contain', 'Submit');
+```
+
+---
+
+## API Testing with Cypress
+
+### Making HTTP Requests
+```javascript
+// GET request
+cy.request('GET', 'http://localhost:3000/api/books')
+  .then((response) => {
+    expect(response.status).to.eq(200);
+    expect(response.body).to.have.length(5);
+  });
+
+// POST request
+cy.request({
+  method: 'POST',
+  url: 'http://localhost:3000/api/books',
+  body: {
+    title: 'New Book',
+    author_id: 1,
+    category_id: 2
+  }
+}).then((response) => {
+  expect(response.status).to.eq(201);
+  expect(response.body).to.have.property('id');
+});
+
+// PUT request
+cy.request('PUT', 'http://localhost:3000/api/books/1', {
+  title: 'Updated Title'
+}).its('status').should('eq', 200);
+
+// DELETE request
+cy.request('DELETE', 'http://localhost:3000/api/books/1')
+  .its('status').should('eq', 204);
+
+// Handling errors (expecting 404, etc.)
+cy.request({
+  method: 'GET',
+  url: 'http://localhost:3000/api/books/999',
+  failOnStatusCode: false  // Don't fail test on non-2xx status
+}).then((response) => {
+  expect(response.status).to.eq(404);
+});
+```
+
+---
+
+## Common Patterns
+
+### Waiting for Elements
+```javascript
+cy.get('button', { timeout: 10000 })        // Wait up to 10s for element
+  .should('be.visible');
+
+cy.get('.spinner').should('not.exist');     // Wait for loading spinner to disappear
+
+cy.wait(1000);                              // Wait 1 second (avoid this if possible)
+```
+
+### Aliases (Storing References)
+```javascript
+cy.get('.user-list').as('userList');        // Create alias
+cy.get('@userList').should('have.length', 5); // Use alias
+```
+
+### Custom Commands (if defined in your project)
+```javascript
+// Might be defined in commands.js
+cy.login('username', 'password');
+cy.createBook({ title: 'Test Book' });
+```
+
+---
+
+## Real-World Examples
+
+### Example 1: Testing a Login Form
+```javascript
+describe('Login Page', () => {
+  beforeEach(() => {
+    cy.visit('/login');
+  });
+
+  it('should login successfully with valid credentials', () => {
+    cy.get('input[name="username"]').type('testuser');
+    cy.get('input[name="password"]').type('password123');
+    cy.get('button[type="submit"]').click();
+    
+    cy.url().should('include', '/dashboard');
+    cy.contains('Welcome, testuser');
+  });
+
+  it('should show error with invalid credentials', () => {
+    cy.get('input[name="username"]').type('wrong');
+    cy.get('input[name="password"]').type('wrong');
+    cy.get('button[type="submit"]').click();
+    
+    cy.contains('Invalid credentials').should('be.visible');
+  });
+});
+```
+
+### Example 2: Testing a Book List
+```javascript
+describe('Books Page', () => {
+  beforeEach(() => {
+    cy.visit('/books');
+  });
+
+  it('should display list of books', () => {
+    cy.get('.book-item').should('have.length.gt', 0);
+    cy.get('.book-item').first().should('contain', 'Title');
+  });
+
+  it('should add a new book', () => {
+    cy.get('button').contains('Add Book').click();
+    cy.get('input[name="title"]').type('New Book Title');
+    cy.get('input[name="author"]').type('Author Name');
+    cy.get('button[type="submit"]').click();
+    
+    cy.contains('New Book Title').should('be.visible');
+  });
+
+  it('should delete a book', () => {
+    cy.get('.book-item').first().find('.delete-btn').click();
+    cy.contains('Confirm').click();
+    
+    cy.contains('Book deleted successfully');
+  });
+});
+```
+
+### Example 3: API Testing
+```javascript
+describe('Books API', () => {
+  it('GET /books returns all books', () => {
+    cy.request('GET', 'http://localhost:3000/api/books')
+      .then((response) => {
+        expect(response.status).to.eq(200);
+        expect(response.headers['content-type']).to.include('application/json');
+        expect(response.body).to.be.an('array');
+        expect(response.body.length).to.be.gt(0);
+      });
+  });
+
+  it('POST /books creates a new book', () => {
+    cy.request('POST', 'http://localhost:3000/api/books', {
+      title: 'Test Book',
+      author_id: 1,
+      category_id: 2,
+      published_year: 2024
+    }).then((response) => {
+      expect(response.status).to.eq(201);
+      expect(response.body).to.have.property('id');
+      expect(response.body.title).to.eq('Test Book');
+    });
+  });
+
+  it('GET /books/:id returns 404 for non-existent book', () => {
+    cy.request({
+      method: 'GET',
+      url: 'http://localhost:3000/api/books/99999',
+      failOnStatusCode: false
+    }).then((response) => {
+      expect(response.status).to.eq(404);
+    });
+  });
+});
+```
+
+---
+
+## Quick Tips
+
+1. **Use `data-testid` attributes** - More reliable than classes/IDs
+   ```html
+   <button data-testid="submit-btn">Submit</button>
+   ```
+   ```javascript
+   cy.get('[data-testid="submit-btn"]').click();
+   ```
+
+2. **Chain commands** - Cypress commands are chainable
+   ```javascript
+   cy.get('input').type('text').should('have.value', 'text');
+   ```
+
+3. **Use `.then()` for complex logic**
+   ```javascript
+   cy.get('.count').then(($el) => {
+     const count = parseInt($el.text());
+     expect(count).to.be.gt(5);
+   });
+   ```
+
+4. **Debugging**
+   ```javascript
+   cy.get('button').debug();  // Pause and debug
+   cy.pause();                // Pause test execution
+   ```
+
+5. **Cypress automatically waits** - No need for manual waits usually
+   - Waits for elements to exist
+   - Waits for elements to be visible
+   - Retries assertions automatically
+
+---
+
+## Common Assertion Patterns
+
+```javascript
+// Comparing values
+expect(response.status).to.eq(200);           // Equal
+expect(response.status).to.equal(200);        // Same as eq
+expect(value).to.not.eq(404);                 // Not equal
+expect(count).to.be.gt(5);                    // Greater than
+expect(count).to.be.gte(5);                   // Greater than or equal
+expect(count).to.be.lt(10);                   // Less than
+expect(count).to.be.lte(10);                  // Less than or equal
+
+// Types
+expect(data).to.be.an('array');
+expect(data).to.be.an('object');
+expect(name).to.be.a('string');
+expect(count).to.be.a('number');
+
+// Properties
+expect(obj).to.have.property('name');
+expect(obj).to.have.property('id', 123);      // With value
+expect(arr).to.have.length(5);
+expect(arr).to.include('item');
+
+// Strings
+expect(text).to.include('substring');
+expect(text).to.match(/regex/);
+
+// Boolean
+expect(value).to.be.true;
+expect(value).to.be.false;
+expect(value).to.exist;
+```
+
+---
+
+## File Structure (typical)
+
+```
+cypress/
+├── e2e/                    # Test files
+│   ├── books.cy.js
+│   ├── authors.cy.js
+│   └── api.cy.js
+├── fixtures/               # Test data (JSON files)
+│   └── books.json
+├── support/                # Custom commands and config
+│   ├── commands.js
+│   └── e2e.js
+└── downloads/              # Downloaded files during tests
+```
+
+---
+
+## Running Cypress
+
+```bash
+# Open Cypress UI
+npx cypress open
+
+# Run tests in headless mode
+npx cypress run
+
+# Run specific test file
+npx cypress run --spec "cypress/e2e/books.cy.js"
+```
+
+---
+
+## Key Differences from Other Testing Tools
+
+| Feature | Cypress | AVA/Jest |
+|---------|---------|----------|
+| **Purpose** | End-to-end browser testing | Unit/API testing |
+| **Runs in** | Real browser | Node.js |
+| **Tests** | UI interactions & API | Logic & API |
+| **Syntax** | `cy.get()`, `cy.click()` | `t.is()`, `await` |
+| **Speed** | Slower (real browser) | Faster (no browser) |
+
+---
+
+## Remember for the Exam
+
+✅ **DO:**
+- Use `cy.get()` to find elements
+- Chain commands: `cy.get().click().should()`
+- Use `cy.request()` for API testing
+- Use `.then()` when you need the actual value
+- Use `failOnStatusCode: false` when testing error responses
+
+❌ **DON'T:**
+- Use `async/await` with Cypress commands (not needed)
+- Store `cy.get()` results in variables (use aliases instead)
+- Add manual waits unless absolutely necessary
+
+---
+
+## Quick Syntax Comparison
+
+```javascript
+// AVA (what you know)
+test('GET /books', async (t) => {
+  const { body, statusCode } = await t.context.got("books");
+  t.is(statusCode, 200);
+  t.is(body.length, 2);
+});
+
+// Cypress (equivalent)
+it('GET /books', () => {
+  cy.request('GET', 'http://localhost:3000/api/books')
+    .then((response) => {
+      expect(response.status).to.eq(200);
+      expect(response.body).to.have.length(2);
+    });
+});
+```
